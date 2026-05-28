@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NEXUS // AGENTS — A Constellation of Six</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#02030a;
+    --bg-1:#06061a;
+    --ink:#e8ecff;
+    --ink-dim:#9aa3c7;
+    --cyan:#5ee9ff;
+    --violet:#9b6bff;
+    --magenta:#ff4fd8;
+    --lime:#b8ff5e;
+    --amber:#ffb547;
+    --line:rgba(255,255,255,.08);
+    --glass:rgba(255,255,255,.04);
+    --glass-strong:rgba(255,255,255,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg-0);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body{min-height:100vh;cursor:none}
+  ::selection{background:var(--cyan);color:#000}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit;color:inherit;background:none;border:0;cursor:none}
+  img,svg{display:block}
+
+  /* ─── Background canvas ─── */
+  #bg-canvas{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:
+      radial-gradient(120% 80% at 50% 0%, transparent 0%, rgba(0,0,0,.4) 60%, rgba(0,0,0,.85) 100%),
+      radial-gradient(60% 40% at 50% 100%, rgba(94,233,255,.06), transparent 60%);
+    mix-blend-mode:normal;
+  }
+  .grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.07;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode:overlay;
+  }
+  .scanlines{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.18;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,0) 0 2px, rgba(255,255,255,.04) 2px 3px);
+    mix-blend-mode:overlay;
+  }
+
+  /* ─── Custom cursor ─── */
+  .cursor{position:fixed;z-index:9999;pointer-events:none;mix-blend-mode:screen}
+  .cursor-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+  .cursor-ring{width:38px;height:38px;border-radius:50%;border:1px solid rgba(94,233,255,.6);transition:transform .25s ease, width .25s ease, height .25s ease, border-color .25s ease}
+  .cursor-ring.hot{width:64px;height:64px;border-color:var(--magenta);box-shadow:0 0 24px rgba(255,79,216,.4)}
+  @media (pointer:coarse){.cursor{display:none}body{cursor:auto}}
+
+  /* ─── Boot loader ─── */
+  #boot{position:fixed;inset:0;z-index:1000;background:#02030a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity .8s ease}
+  #boot.gone{opacity:0;pointer-events:none}
+  .boot-logo{font-family:'Orbitron',sans-serif;letter-spacing:.4em;font-weight:700;color:var(--ink);font-size:14px}
+  .boot-logo span{color:var(--cyan)}
+  .boot-bar{width:280px;height:1px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+  .boot-bar::after{content:"";position:absolute;inset:0;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));animation:boot 2.2s cubic-bezier(.7,0,.2,1) forwards}
+  @keyframes boot{to{width:100%}}
+  .boot-lines{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-dim);text-align:center;line-height:1.7;opacity:.7}
+
+  /* ─── Top nav HUD ─── */
+  .hud-top{position:fixed;top:0;left:0;right:0;z-index:50;padding:22px 32px;display:flex;align-items:center;justify-content:space-between;mix-blend-mode:normal}
+  .brand{display:flex;align-items:center;gap:12px;font-family:'Orbitron',sans-serif;letter-spacing:.32em;font-size:12px;font-weight:700}
+  .brand-mark{width:22px;height:22px;border:1px solid var(--cyan);transform:rotate(45deg);position:relative}
+  .brand-mark::after{content:"";position:absolute;inset:3px;background:linear-gradient(135deg,var(--cyan),var(--magenta));opacity:.6}
+  .brand-mark::before{content:"";position:absolute;inset:-4px;border:1px solid rgba(94,233,255,.25)}
+  .brand b{color:var(--cyan)}
+  .nav{display:flex;gap:6px;align-items:center;background:var(--glass);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid var(--line);border-radius:999px;padding:6px}
+  .nav a{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);padding:9px 16px;border-radius:999px;transition:.25s ease;position:relative}
+  .nav a:hover, .nav a.active{color:var(--ink);background:rgba(94,233,255,.08)}
+  .nav a.active::before{content:"";position:absolute;left:10px;top:50%;width:4px;height:4px;border-radius:50%;background:var(--cyan);transform:translateY(-50%);box-shadow:0 0 8px var(--cyan)}
+  .nav a.active{padding-left:22px}
+  .hud-side{display:flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-dim);letter-spacing:.14em}
+  .ping{display:inline-flex;align-items:center;gap:8px}
+  .ping i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+  /* ─── HUD corners ─── */
+  .corner{position:fixed;z-index:40;pointer-events:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-dim);letter-spacing:.16em}
+  .corner.tl{top:82px;left:32px}
+  .corner.tr{top:82px;right:32px;text-align:right}
+  .corner.bl{bottom:24px;left:32px}
+  .corner.br{bottom:24px;right:32px;text-align:right}
+  .corner b{color:var(--cyan);font-weight:500}
+  .crosshair{position:fixed;z-index:40;pointer-events:none;width:80px;height:80px;border:1px dashed rgba(94,233,255,.25);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%) scale(.7);opacity:.35}
+  .crosshair::before,.crosshair::after{content:"";position:absolute;background:rgba(94,233,255,.35)}
+  .crosshair::before{left:50%;top:-10px;bottom:-10px;width:1px;transform:translateX(-50%)}
+  .crosshair::after{top:50%;left:-10px;right:-10px;height:1px;transform:translateY(-50%)}
+
+  /* ─── Layout ─── */
+  main{position:relative;z-index:10}
+  section{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px 8vw}
+
+  /* ─── HERO ─── */
+  .hero{padding-top:160px;padding-bottom:60px}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.32em;color:var(--ink-dim);margin-bottom:36px;padding:10px 16px 10px 14px;background:var(--glass);border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);width:fit-content}
+  .hero-eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--magenta);box-shadow:0 0 10px var(--magenta)}
+  .hero-title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(56px, 11vw, 168px);line-height:.88;letter-spacing:-.02em;margin-bottom:28px;position:relative}
+  .hero-title .row{display:block;position:relative}
+  .hero-title .stroke{-webkit-text-stroke:1px rgba(232,236,255,.4);color:transparent}
+  .hero-title .grad{background:linear-gradient(120deg,#fff 0%,#5ee9ff 35%,#9b6bff 65%,#ff4fd8 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 30px rgba(94,233,255,.18))}
+  .hero-title .glitch{position:relative;display:inline-block}
+  .hero-title .glitch::before,.hero-title .glitch::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%;height:100%;background:transparent;mix-blend-mode:screen;opacity:.6}
+  .hero-title .glitch::before{color:var(--cyan);transform:translate(2px,0);clip-path:inset(0 0 60% 0);animation:glitchA 4s infinite steps(2)}
+  .hero-title .glitch::after{color:var(--magenta);transform:translate(-2px,0);clip-path:inset(60% 0 0 0);animation:glitchB 4s infinite steps(2)}
+  @keyframes glitchA{0%,90%,100%{clip-path:inset(0 0 60% 0);transform:translate(2px,0)}92%{clip-path:inset(40% 0 20% 0);transform:translate(-4px,1px)}95%{clip-path:inset(10% 0 70% 0);transform:translate(3px,-2px)}}
+  @keyframes glitchB{0%,90%,100%{clip-path:inset(60% 0 0 0);transform:translate(-2px,0)}92%{clip-path:inset(20% 0 50% 0);transform:translate(4px,-1px)}95%{clip-path:inset(70% 0 10% 0);transform:translate(-3px,2px)}}
+
+  .hero-sub{max-width:560px;color:var(--ink-dim);font-size:16px;line-height:1.6;margin-top:28px;letter-spacing:.01em}
+  .hero-sub b{color:var(--ink);font-weight:500}
+
+  .hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:60px;margin-top:60px;flex-wrap:wrap}
+  .hero-cta{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .btn{position:relative;display:inline-flex;align-items:center;gap:14px;padding:18px 26px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;border-radius:999px;transition:.3s ease;overflow:hidden}
+  .btn-primary{background:linear-gradient(120deg,var(--cyan),var(--violet));color:#000;font-weight:700;box-shadow:0 10px 40px -10px rgba(94,233,255,.6), inset 0 0 0 1px rgba(255,255,255,.5)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 60px -10px rgba(155,107,255,.7), inset 0 0 0 1px rgba(255,255,255,.7)}
+  .btn-primary .arr{width:18px;height:18px;border-radius:50%;background:#000;display:inline-flex;align-items:center;justify-content:center;color:var(--cyan)}
+  .btn-ghost{color:var(--ink);background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+  .btn-ghost:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(94,233,255,.06)}
+  .btn-ghost .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+
+  .hero-stats{display:flex;gap:36px;flex-wrap:wrap}
+  .stat{font-family:'JetBrains Mono',monospace}
+  .stat .num{font-family:'Orbitron',sans-serif;font-weight:700;font-size:30px;color:var(--ink);letter-spacing:.04em;background:linear-gradient(120deg,#fff,#5ee9ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .stat .lbl{font-size:10px;letter-spacing:.24em;color:var(--ink-dim);text-transform:uppercase;margin-top:6px}
+
+  .scroll-hint{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.32em;color:var(--ink-dim);display:flex;flex-direction:column;align-items:center;gap:10px}
+  .scroll-hint .bar{width:1px;height:48px;background:linear-gradient(to bottom, transparent, var(--cyan));animation:scrollLine 2.2s ease-in-out infinite}
+  @keyframes scrollLine{0%,100%{opacity:.2;transform:scaleY(.6)}50%{opacity:1;transform:scaleY(1)}}
+
+  /* ─── Floating glass cards on hero ─── */
+  .float-cards{position:absolute;inset:0;pointer-events:none;z-index:5}
+  .gcard{position:absolute;pointer-events:auto;background:var(--glass-strong);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 30px 80px -30px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);font-family:'JetBrains Mono',monospace;color:var(--ink-dim);font-size:10.5px;letter-spacing:.08em;will-change:transform}
+  .gcard h5{font-family:'Space Grotesk',sans-serif;font-size:11px;letter-spacing:.22em;color:var(--ink);margin-bottom:10px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .gcard h5 i{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+  .gcard.c1{top:24%;right:6%;width:240px}
+  .gcard.c2{top:54%;right:10%;width:220px}
+  .gcard.c3{top:38%;left:4%;width:210px}
+  .gcard .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+  .gcard .row:last-child{border:0}
+  .gcard .row b{color:var(--ink);font-weight:500}
+  .spark{height:34px;display:flex;align-items:flex-end;gap:3px;margin-top:8px}
+  .spark span{flex:1;background:linear-gradient(to top,var(--violet),var(--cyan));border-radius:2px;opacity:.8}
+  .ring-vis{width:120px;height:120px;margin:6px auto 4px;position:relative}
+  .ring-vis svg{transform:rotate(-90deg)}
+  .ring-vis .val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;color:var(--cyan);font-size:22px;letter-spacing:.04em}
+
+  /* ─── Section heading ─── */
+  .sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:72px;flex-wrap:wrap}
+  .sec-tag{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.32em;color:var(--cyan);text-transform:uppercase;margin-bottom:18px;display:inline-flex;align-items:center;gap:12px}
+  .sec-tag::before{content:"";width:24px;height:1px;background:var(--cyan)}
+  .sec-title{font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(38px,5.6vw,80px);line-height:.96;letter-spacing:-.01em;max-width:1100px}
+  .sec-title em{font-style:normal;background:linear-gradient(120deg,#5ee9ff,#9b6bff,#ff4fd8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sec-sub{max-width:380px;color:var(--ink-dim);font-size:15px;line-height:1.65}
+
+  /* ─── Modules grid ─── */
+  .modules{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+  .mod{position:relative;background:var(--glass-strong);border:1px solid var(--line);border-radius:22px;padding:28px;backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);overflow:hidden;transition:.4s cubic-bezier(.2,.8,.2,1)}
+  .mod::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 80% at 100% 0%, rgba(94,233,255,.08), transparent 60%);opacity:0;transition:.4s}
+  .mod:hover{transform:translateY(-6px);border-color:rgba(94,233,255,.3);box-shadow:0 30px 80px -30px rgba(94,233,255,.25)}
+  .mod:hover::before{opacity:1}
+  .mod-a{grid-column:span 6;grid-row:span 2;min-height:540px}
+  .mod-b{grid-column:span 6;min-height:250px}
+  .mod-c{grid-column:span 6;min-height:250px}
+  .mod-d{grid-column:span 4;min-height:240px}
+  .mod-e{grid-column:span 4;min-height:240px}
+  .mod-f{grid-column:span 4;min-height:240px}
+  .mod-num{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.24em;color:var(--ink-dim);margin-bottom:auto;display:flex;justify-content:space-between}
+  .mod-num b{color:var(--cyan)}
+  .mod h3{font-family:'Orbitron',sans-serif;font-weight:600;font-size:24px;letter-spacing:.01em;margin:14px 0 10px;line-height:1.15}
+  .mod-a h3{font-size:42px;line-height:1.05}
+  .mod p{color:var(--ink-dim);font-size:13.5px;line-height:1.6;max-width:380px}
+  .mod-cta{margin-top:18px;display:inline-flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan)}
+  .mod-cta .arr{width:24px;height:24px;border-radius:50%;border:1px solid var(--cyan);display:inline-flex;align-items:center;justify-content:center;transition:.3s}
+  .mod:hover .mod-cta .arr{background:var(--cyan);color:#000}
+  .mod-viz{position:absolute;right:-30px;bottom:-30px;width:280px;height:280px;opacity:.7;pointer-events:none}
+  .mod-flex{display:flex;flex-direction:column;height:100%}
+  .mod-a .mod-flex{justify-content:space-between}
+
+  .holo-orb{position:relative;width:100%;aspect-ratio:1;display:grid;place-items:center}
+  .holo-orb canvas{width:100%;height:100%}
+
+  /* ─── Cinematic strip ─── */
+  .strip{padding:80px 0;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(0,0,0,.3);min-height:auto}
+  .strip-track{display:flex;gap:80px;white-space:nowrap;animation:strip 40s linear infinite}
+  .strip-track span{font-family:'Orbitron',sans-serif;font-weight:700;font-size:64px;letter-spacing:.04em;color:transparent;-webkit-text-stroke:1px rgba(232,236,255,.45);display:inline-flex;align-items:center;gap:80px}
+  .strip-track span i{width:14px;height:14px;background:var(--cyan);box-shadow:0 0 24px var(--cyan);border-radius:50%}
+  @keyframes strip{to{transform:translateX(-50%)}}
+
+  /* ─── Vessel section ─── */
+  .vessel{padding:160px 8vw;display:grid;grid-template-columns:1.1fr .9fr;gap:80px;align-items:center}
+  .vessel-info{position:relative}
+  .vessel-tag{display:inline-flex;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.32em;color:var(--magenta);padding:8px 14px;border:1px solid rgba(255,79,216,.3);border-radius:999px;margin-bottom:24px;background:rgba(255,79,216,.06)}
+  .vessel-info h2{font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(40px,5vw,72px);line-height:.98;margin-bottom:24px}
+  .vessel-info h2 em{font-style:normal;-webkit-text-stroke:1px var(--ink);color:transparent}
+  .vessel-info p{color:var(--ink-dim);font-size:15.5px;line-height:1.7;max-width:520px;margin-bottom:36px}
+  .specs{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--line)}
+  .spec{padding:18px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px}
+  .spec span{color:var(--ink-dim);letter-spacing:.18em;text-transform:uppercase}
+  .spec b{color:var(--ink);font-weight:500;font-family:'Orbitron',sans-serif;font-size:14px}
+  .spec b i{color:var(--cyan);font-style:normal;font-size:10px;margin-left:6px}
+  .spec:nth-child(odd){padding-right:24px}
+  .spec:nth-child(even){padding-left:24px;border-left:1px solid var(--line);margin-left:-1px}
+
+  .vessel-vis{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:24px;background:radial-gradient(60% 60% at 50% 50%, rgba(94,233,255,.04), transparent 70%);overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .vessel-vis canvas{position:absolute;inset:0;width:100%;height:100%}
+  .vessel-vis .vlabel{position:absolute;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase;display:flex;align-items:center;gap:8px;pointer-events:none}
+  .vessel-vis .vlabel::before{content:"";width:24px;height:1px;background:var(--cyan)}
+  .vessel-vis .vlabel.l1{top:14%;left:8%}
+  .vessel-vis .vlabel.l2{top:34%;right:8%;flex-direction:row-reverse}
+  .vessel-vis .vlabel.l2::before{margin-left:8px}
+  .vessel-vis .vlabel.l3{bottom:18%;left:12%}
+  .vessel-vis .vbadge{position:absolute;top:18px;left:18px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--cyan);padding:6px 10px;border:1px solid rgba(94,233,255,.3);border-radius:6px;background:rgba(94,233,255,.05)}
+  .vessel-vis .vrange{position:absolute;bottom:18px;right:18px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-dim);letter-spacing:.14em}
+  .vessel-vis .vrange b{display:block;font-family:'Orbitron',sans-serif;color:var(--ink);font-size:18px;letter-spacing:.04em;margin-top:2px}
+
+  /* ─── Timeline ─── */
+  .timeline{padding:160px 8vw;position:relative}
+  .timeline-list{position:relative;padding-left:60px;border-left:1px solid var(--line);margin-top:60px}
+  .tl-item{padding:32px 0;display:grid;grid-template-columns:auto 1fr auto;gap:32px;align-items:center;border-bottom:1px solid var(--line);position:relative;cursor:none;transition:.3s}
+  .tl-item::before{content:"";position:absolute;left:-66px;top:50%;width:12px;height:12px;border-radius:50%;background:#02030a;border:1px solid var(--cyan);transform:translateY(-50%);transition:.3s}
+  .tl-item:hover::before{background:var(--cyan);box-shadow:0 0 20px var(--cyan)}
+  .tl-item::after{content:"";position:absolute;left:-72px;top:50%;width:24px;height:1px;background:var(--cyan);opacity:.3;transform:translateY(-50%)}
+  .tl-time{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:.06em;color:var(--cyan);font-weight:500}
+  .tl-content h4{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:500;margin-bottom:4px}
+  .tl-content p{color:var(--ink-dim);font-size:13.5px;line-height:1.5}
+  .tl-meta{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase;text-align:right}
+  .tl-meta b{display:block;color:var(--ink);font-family:'Orbitron',sans-serif;font-size:18px;margin-bottom:2px;letter-spacing:.04em}
+  .tl-item:hover{padding-left:14px;background:linear-gradient(90deg, rgba(94,233,255,.04), transparent 60%)}
+
+  /* ─── Signal terminal ─── */
+  .terminal{padding:160px 8vw;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+  .term-left h2{font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(40px,5vw,72px);line-height:.98;margin-bottom:30px}
+  .term-left h2 em{font-style:normal;background:linear-gradient(120deg,#5ee9ff,#9b6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .term-left p{color:var(--ink-dim);font-size:15.5px;line-height:1.7;margin-bottom:36px;max-width:480px}
+  .signal-form{display:flex;gap:8px;max-width:520px;padding:8px;background:var(--glass);border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+  .signal-form input{flex:1;background:none;border:0;outline:none;color:var(--ink);font-family:'JetBrains Mono',monospace;padding:14px 20px;font-size:12.5px;letter-spacing:.06em}
+  .signal-form input::placeholder{color:var(--ink-dim)}
+  .signal-form button{padding:14px 24px;border-radius:999px;background:linear-gradient(120deg,var(--cyan),var(--violet));color:#000;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;transition:.3s}
+  .signal-form button:hover{filter:brightness(1.15) saturate(1.2);transform:translateX(2px)}
+
+  .terminal-box{background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;box-shadow:0 30px 80px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04)}
+  .term-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--line)}
+  .term-bar-l{display:flex;align-items:center;gap:8px}
+  .term-bar-l i{width:10px;height:10px;border-radius:50%;background:var(--ink-dim);opacity:.3}
+  .term-bar-l i:nth-child(1){background:var(--magenta);opacity:1}
+  .term-bar-l i:nth-child(2){background:var(--amber);opacity:1}
+  .term-bar-l i:nth-child(3){background:var(--lime);opacity:1}
+  .term-bar-r{font-size:10px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase}
+  .term-body{padding:22px 24px;min-height:300px;color:var(--ink-dim)}
+  .term-body .pr{color:var(--cyan);user-select:none}
+  .term-body .ok{color:var(--lime)}
+  .term-body .wn{color:var(--amber)}
+  .term-body .er{color:var(--magenta)}
+  .term-body .dim{color:#5a6390}
+  .term-cursor{display:inline-block;width:8px;height:14px;background:var(--cyan);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* ─── Footer ─── */
+  footer{padding:80px 8vw 60px;border-top:1px solid var(--line);display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:60px;font-family:'JetBrains Mono',monospace}
+  footer h6{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:.28em;color:var(--ink-dim);text-transform:uppercase;margin-bottom:20px;font-weight:500}
+  footer a{display:block;padding:6px 0;font-size:12px;color:var(--ink);letter-spacing:.04em;opacity:.85;transition:.2s}
+  footer a:hover{color:var(--cyan);opacity:1;transform:translateX(4px)}
+  .foot-brand{font-family:'Orbitron',sans-serif;font-size:36px;letter-spacing:.06em;font-weight:700;background:linear-gradient(120deg,#fff,#5ee9ff,#9b6bff);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:18px}
+  .foot-brand b{font-weight:900}
+  .foot-tag{font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--ink-dim);line-height:1.6;max-width:340px;margin-bottom:24px}
+  .foot-coords{font-size:10.5px;color:var(--ink-dim);letter-spacing:.14em;line-height:1.8}
+  .foot-coords b{color:var(--ink)}
+  .foot-bottom{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding-top:36px;border-top:1px solid var(--line);font-size:10.5px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase}
+  .foot-bottom .right{display:flex;gap:24px}
+
+  /* ─── Reveal animations ─── */
+  .reveal{opacity:0;transform:translateY(40px);transition:opacity 1s cubic-bezier(.2,.8,.2,1), transform 1s cubic-bezier(.2,.8,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal-d2{transition-delay:.1s}
+  .reveal-d3{transition-delay:.2s}
+  .reveal-d4{transition-delay:.3s}
+
+  /* ─── Responsive ─── */
+  @media (max-width:1100px){
+    .modules{grid-template-columns:repeat(6,1fr)}
+    .mod-a,.mod-b,.mod-c,.mod-d,.mod-e,.mod-f{grid-column:span 6;grid-row:auto;min-height:auto}
+    .vessel,.terminal{grid-template-columns:1fr;gap:60px}
+    .gcard.c1,.gcard.c2,.gcard.c3{display:none}
+    footer{grid-template-columns:1fr 1fr;gap:40px}
+    .foot-bottom{flex-direction:column;gap:14px;text-align:center}
+  }
+  @media (max-width:680px){
+    section{padding:100px 6vw}
+    .hud-top{padding:18px 6vw}
+    .nav{display:none}
+    .corner{display:none}
+    footer{grid-template-columns:1fr;padding:60px 6vw}
+    .specs{grid-template-columns:1fr}
+    .spec:nth-child(even){padding-left:0;border-left:0;margin:0}
+    .spec:nth-child(odd){padding-right:0}
+    .timeline-list{padding-left:32px}
+    .tl-item{grid-template-columns:1fr;gap:6px}
+    .tl-meta{text-align:left}
+  }
+</style>
+</head>
+<body>
+
+<!-- Boot loader -->
+<div id="boot">
+  <div class="boot-logo">NEXUS <span>//</span> AGENTS</div>
+  <div class="boot-bar"></div>
+  <div class="boot-lines">
+    > initialising mesh · authenticating operator · waking 6 agents · sync 99.7%
+  </div>
+</div>
+
+<!-- 3D background -->
+<canvas id="bg-canvas"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="scanlines"></div>
+
+<!-- Custom cursor -->
+<div class="cursor cursor-ring" id="cur-ring"></div>
+<div class="cursor cursor-dot" id="cur-dot"></div>
+
+<!-- Crosshair -->
+<div class="crosshair"></div>
+
+<!-- HUD corners -->
+<div class="corner tl">N <b>34.0522°</b><br>W <b>118.2437°</b><br>ALT <b>+ 41,920 m</b></div>
+<div class="corner tr">SECTOR <b>07-Δ</b><br>OPERATOR <b>R.PARNAMI</b><br>CLEARANCE <b>OMEGA</b></div>
+<div class="corner bl" id="hud-time">// SYNC LOCKED</div>
+<div class="corner br">FRAME <b id="hud-frame">000000</b> · TEMP <b>−196°C</b></div>
+
+<!-- Top HUD -->
+<header class="hud-top">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    NEXUS<b>//</b>AGENTS
+  </div>
+  <nav class="nav">
+    <a href="#hero" class="active">Origin</a>
+    <a href="#agents">Agents</a>
+    <a href="#doculens">Doculens</a>
+    <a href="#log">Log</a>
+    <a href="#signal">Signal</a>
+  </nav>
+  <div class="hud-side">
+    <span class="ping"><i></i>LINK STABLE</span>
+    <span id="utc">00:00:00 UTC</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-eyebrow reveal">
+      <i></i> Build 24.05 · Six agents online · Mesh synchronised
+    </div>
+    <h1 class="hero-title">
+      <span class="row reveal">SIX&nbsp;MINDS.</span>
+      <span class="row reveal reveal-d2"><span class="grad">ONE&nbsp;MESH.</span></span>
+      <span class="row stroke reveal reveal-d3"><span class="glitch" data-text="ZERO LATENCY.">ZERO&nbsp;LATENCY.</span></span>
+    </h1>
+    <p class="hero-sub reveal reveal-d4">
+      NEXUS is a <b>constellation of six purpose-built AI agents</b> — each specialised, all entangled.
+      Documentation that rewrites itself, Jira that organises itself, hires that decide themselves, architectures that draw themselves.
+    </p>
+
+    <div class="hero-row">
+      <div class="hero-cta reveal reveal-d4">
+        <button class="btn btn-primary" data-cur="hot">Activate the Mesh <span class="arr">→</span></button>
+        <button class="btn btn-ghost" data-cur="hot"><span class="dot"></span>Watch a Run</button>
+      </div>
+      <div class="hero-stats reveal reveal-d4">
+        <div class="stat"><div class="num" data-count="6">0</div><div class="lbl">Agents online</div></div>
+        <div class="stat"><div class="num" data-count="184">000</div><div class="lbl">Tasks / second</div></div>
+        <div class="stat"><div class="num" data-count="99">00</div><div class="lbl">Mesh integrity %</div></div>
+      </div>
+    </div>
+
+    <!-- Floating holo cards -->
+    <div class="float-cards">
+      <div class="gcard c1 reveal reveal-d2" data-depth="0.6" data-cur="hot">
+        <h5><i></i>AGENT · DOCULENS</h5>
+        <div class="row"><span>Repos indexed</span><b>1,284</b></div>
+        <div class="row"><span>Docs generated</span><b>41.2k</b></div>
+        <div class="row"><span>Drift</span><b>0.04%</b></div>
+        <div class="spark" id="spark1"></div>
+      </div>
+      <div class="gcard c2 reveal reveal-d3" data-depth="1.1" data-cur="hot">
+        <h5><i></i>MESH · SYNC</h5>
+        <div class="ring-vis" id="ring">
+          <svg width="120" height="120">
+            <circle cx="60" cy="60" r="52" stroke="rgba(255,255,255,.06)" stroke-width="2" fill="none"/>
+            <circle id="ringFill" cx="60" cy="60" r="52" stroke="url(#grd)" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="80"/>
+            <defs>
+              <linearGradient id="grd" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#5ee9ff"/>
+                <stop offset="100%" stop-color="#9b6bff"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="val">76<span style="font-size:10px;color:var(--ink-dim);margin-left:2px">%</span></div>
+        </div>
+        <div class="row" style="margin-top:4px"><span>Sync rate</span><b>STABLE</b></div>
+      </div>
+      <div class="gcard c3 reveal reveal-d4" data-depth="0.8" data-cur="hot">
+        <h5><i></i>JIRACREATE · QUEUE</h5>
+        <div class="row"><span>Epics opened</span><b>24</b></div>
+        <div class="row"><span>Stories routed</span><b>142</b></div>
+        <div class="row"><span>Sub-tasks</span><b>318</b></div>
+        <div class="row"><span>Auto-resolved</span><b>99%</b></div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>SCROLL</span>
+      <span class="bar"></span>
+      <span>↓</span>
+    </div>
+  </section>
+
+  <!-- AGENTS -->
+  <section id="agents">
+    <div class="sec-head">
+      <div>
+        <div class="sec-tag reveal">// 02 · THE AGENTS</div>
+        <h2 class="sec-title reveal reveal-d2">Six agents orchestrating <em>one living mesh.</em></h2>
+      </div>
+      <p class="sec-sub reveal reveal-d3">
+        Each agent owns a domain — docs, tickets, data, hiring, coaching, architecture. They share state, context and memory, so work flows between them without anyone resending the brief.
+      </p>
+    </div>
+
+    <div class="modules">
+      <!-- Doculens (flagship) -->
+      <div class="mod mod-a reveal" data-cur="hot">
+        <div class="mod-flex">
+          <div>
+            <div class="mod-num">FLAGSHIP AGENT<b>// 001 · DOCULENS</b></div>
+            <h3>Docs that <br>rewrite themselves.</h3>
+            <p>Doculens watches every commit, PR and branch — then synthesises engineering motion into living documentation. Release notes, API references and onboarding paths that stay correct because the agent never blinks.</p>
+          </div>
+          <div class="holo-orb"><canvas id="orb"></canvas></div>
+          <a class="mod-cta">Engage Doculens <span class="arr">↗</span></a>
+        </div>
+      </div>
+
+      <!-- JiraCreate -->
+      <div class="mod mod-b reveal reveal-d2" data-cur="hot">
+        <div class="mod-num">AGENT<b>// 002 · JIRACREATE</b></div>
+        <h3>Jira on autopilot.</h3>
+        <p>Plain-language intent becomes well-formed epics, stories and sub-tasks — routed to the right teams without a status meeting.</p>
+        <a class="mod-cta">Open queue <span class="arr">↗</span></a>
+      </div>
+
+      <!-- Foundations AI -->
+      <div class="mod mod-c reveal reveal-d3" data-cur="hot">
+        <div class="mod-num">AGENT<b>// 003 · FOUNDATIONS AI</b></div>
+        <h3>Structured data, narrated.</h3>
+        <p>Pipe your warehouse — SQL, parquet, dataframes — and Foundations turns the rows into a document a human would actually read.</p>
+        <a class="mod-cta">Pipe in <span class="arr">↗</span></a>
+      </div>
+
+      <!-- HireX -->
+      <div class="mod mod-d reveal reveal-d2" data-cur="hot">
+        <div class="mod-num">AGENT<b>// 004 · HIREX</b></div>
+        <h3>Talent, end to end.</h3>
+        <p>Sources, screens, interviews and ranks. Calibrated rubric, decision in hours.</p>
+        <a class="mod-cta">Open pipeline <span class="arr">↗</span></a>
+      </div>
+
+      <!-- CortexAI -->
+      <div class="mod mod-e reveal reveal-d3" data-cur="hot">
+        <div class="mod-num">AGENT<b>// 005 · CORTEXAI</b></div>
+        <h3>Coaching that thinks with you.</h3>
+        <p>Live AI tutoring for online curricula — paced, patient, personal.</p>
+        <a class="mod-cta">Start session <span class="arr">↗</span></a>
+      </div>
+
+      <!-- Architect AI -->
+      <div class="mod mod-f reveal reveal-d4" data-cur="hot">
+        <div class="mod-num">AGENT<b>// 006 · ARCHITECT AI</b></div>
+        <h3>Systems at thought-speed.</h3>
+        <p>From a brief: components, contracts, trade-offs — and the diagram to defend it.</p>
+        <a class="mod-cta">Draft system <span class="arr">↗</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cinematic strip -->
+  <section class="strip" style="min-height:auto;padding:60px 0">
+    <div class="strip-track">
+      <span>DOCS&nbsp;THAT&nbsp;WRITE&nbsp;THEMSELVES <i></i> TICKETS&nbsp;THAT&nbsp;PLAN&nbsp;THEMSELVES <i></i> HIRES&nbsp;THAT&nbsp;DECIDE&nbsp;THEMSELVES <i></i> SYSTEMS&nbsp;THAT&nbsp;DRAW&nbsp;THEMSELVES <i></i> DOCS&nbsp;THAT&nbsp;WRITE&nbsp;THEMSELVES <i></i> TICKETS&nbsp;THAT&nbsp;PLAN&nbsp;THEMSELVES <i></i> HIRES&nbsp;THAT&nbsp;DECIDE&nbsp;THEMSELVES <i></i> SYSTEMS&nbsp;THAT&nbsp;DRAW&nbsp;THEMSELVES <i></i></span>
+    </div>
+  </section>
+
+  <!-- DOCULENS — flagship spotlight -->
+  <section class="vessel" id="doculens">
+    <div class="vessel-info">
+      <span class="vessel-tag reveal">// 03 · FLAGSHIP AGENT</span>
+      <h2 class="reveal reveal-d2">DOCULENS <em>THE WITNESS</em></h2>
+      <p class="reveal reveal-d3">Wire Doculens to a repo and it never looks away. Commits, PRs, branches, releases — every motion becomes a sentence. The agent re-renders your docs as the code moves, so the README, the API reference and the onboarding guide are always the same age as the code.</p>
+      <div class="specs reveal reveal-d4">
+        <div class="spec"><span>Repos</span><b>1,284 <i>INDEXED</i></b></div>
+        <div class="spec"><span>Languages</span><b>28 <i>NATIVE</i></b></div>
+        <div class="spec"><span>Docs</span><b>41.2k <i>WRITTEN</i></b></div>
+        <div class="spec"><span>Lag</span><b>240 <i>MS</i></b></div>
+        <div class="spec"><span>Coverage</span><b>99.4 <i>%</i></b></div>
+        <div class="spec"><span>Mode</span><b>CONTINUOUS <i>· LIVE</i></b></div>
+      </div>
+    </div>
+    <div class="vessel-vis reveal reveal-d3" id="vessel-vis">
+      <canvas id="vessel-canvas"></canvas>
+      <span class="vbadge">DOCULENS // OBSERVING</span>
+      <span class="vlabel l1">PR ingest</span>
+      <span class="vlabel l2">Diff parser</span>
+      <span class="vlabel l3">Doc synth</span>
+      <div class="vrange">Coverage <b>99.4 %</b></div>
+    </div>
+  </section>
+
+  <!-- TIMELINE / LOG -->
+  <section class="timeline" id="log">
+    <div class="sec-head">
+      <div>
+        <div class="sec-tag reveal">// 04 · AGENT ACTIVITY</div>
+        <h2 class="sec-title reveal reveal-d2">Signals from <em>the agent mesh.</em></h2>
+      </div>
+      <p class="sec-sub reveal reveal-d3">A live feed of what the agents finished, opened, screened or drafted in the last few hours. Every event reshapes what the mesh does next.</p>
+    </div>
+
+    <div class="timeline-list">
+      <div class="tl-item reveal" data-cur="hot">
+        <div class="tl-time">21:04</div>
+        <div class="tl-content"><h4>Doculens regenerated the API reference for <code style="font-family:inherit;color:var(--cyan)">platform-core</code></h4><p>Triggered by merge of PR #4128 · 248 docs touched · 12 new pages written.</p></div>
+        <div class="tl-meta"><b>DOCULENS</b>regen</div>
+      </div>
+      <div class="tl-item reveal reveal-d2" data-cur="hot">
+        <div class="tl-time">19:47</div>
+        <div class="tl-content"><h4>JiraCreate spawned an epic from a two-sentence brief</h4><p>"Ship the new search UI by Q3" → 1 epic + 14 sub-tasks routed across 3 teams.</p></div>
+        <div class="tl-meta"><b>JIRACREATE</b>+14 tasks</div>
+      </div>
+      <div class="tl-item reveal reveal-d3" data-cur="hot">
+        <div class="tl-time">17:12</div>
+        <div class="tl-content"><h4>Foundations AI narrated the Q2 metrics warehouse</h4><p>4.2M rows → 14-page board memo with charts and a forecasting appendix.</p></div>
+        <div class="tl-meta"><b>FOUNDATIONS</b>+1 doc</div>
+      </div>
+      <div class="tl-item reveal reveal-d4" data-cur="hot">
+        <div class="tl-time">14:36</div>
+        <div class="tl-content"><h4>HireX shortlisted 6 senior platform engineers</h4><p>482 applications screened · calibrated rubric · top 6 ranked with rationale.</p></div>
+        <div class="tl-meta"><b>HIREX</b>6 / 482</div>
+      </div>
+      <div class="tl-item reveal" data-cur="hot">
+        <div class="tl-time">11:08</div>
+        <div class="tl-content"><h4>CortexAI ran 1,140 coaching sessions overnight</h4><p>System design cohort · 92% session-rating · 38 learners ready for mock interviews.</p></div>
+        <div class="tl-meta"><b>CORTEXAI</b>1,140 runs</div>
+      </div>
+      <div class="tl-item reveal reveal-d2" data-cur="hot">
+        <div class="tl-time">09:21</div>
+        <div class="tl-content"><h4>Architect AI proposed an event-driven redesign of the billing core</h4><p>Components, contracts, trade-offs and a Mermaid diagram. Awaiting review.</p></div>
+        <div class="tl-meta"><b>ARCHITECT</b>1 draft</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMINAL / SIGNAL -->
+  <section class="terminal" id="signal">
+    <div class="term-left">
+      <div class="sec-tag reveal">// 05 · DEPLOY THE MESH</div>
+      <h2 class="reveal reveal-d2">Wake an <em>agent.</em></h2>
+      <p class="reveal reveal-d3">Drop your address and we'll route one of the six agents to your stack. Tell us the surface — repo, board, warehouse, pipeline — and the right agent answers within the day.</p>
+      <form class="signal-form reveal reveal-d4" onsubmit="event.preventDefault();transmit(this);">
+        <input type="email" placeholder="you@company.com" required>
+        <button data-cur="hot">Request access ↗</button>
+      </form>
+    </div>
+    <div class="terminal-box reveal reveal-d2" data-cur="hot">
+      <div class="term-bar">
+        <div class="term-bar-l"><i></i><i></i><i></i></div>
+        <div class="term-bar-r">nexus@agents — /var/agents/mesh</div>
+      </div>
+      <div class="term-body" id="term">
+        <div><span class="pr">nexus &gt;</span> <span class="dim">mesh up --agents 6</span></div>
+        <div><span class="ok">✓</span> doculens · jiracreate · foundations · hirex · cortex · architect <span class="dim">online</span></div>
+        <div><span class="pr">nexus &gt;</span> <span class="dim">doculens regen --repo platform-core --since "last release"</span></div>
+        <div><span class="ok">✓</span> 248 docs touched · 12 generated · <span class="dim">240ms</span></div>
+        <div><span class="pr">nexus &gt;</span> <span class="dim">jiracreate "ship the new search UI by Q3" --epic</span></div>
+        <div><span class="ok">✓</span> epic NEX-2148 + <b style="color:var(--cyan)">14 sub-tasks</b> routed</div>
+        <div><span class="wn">!</span> foundations · warehouse drift detected · re-anchoring</div>
+        <div><span class="pr">nexus &gt;</span> <span class="dim">hirex screen --role "staff platform eng" --bar high</span></div>
+        <div><span class="ok">✓</span> shortlist of <b style="color:var(--cyan)">6 / 482</b> ranked for operator <b style="color:var(--cyan)">R.PARNAMI</b></div>
+        <div><span class="pr">nexus &gt;</span> <span id="term-cmd"></span><span class="term-cursor"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>
+      <div class="foot-brand">NEXUS<b>//</b></div>
+      <div class="foot-tag" style="font-family:'Space Grotesk',sans-serif">A constellation of six purpose-built agents — Doculens, JiraCreate, Foundations AI, HireX, CortexAI and Architect AI — sharing one memory, one mesh, one operator.</div>
+      <div class="foot-coords">
+        OUTPOST · <b>SECTOR 07-Δ</b><br>
+        LAT <b>34.0522° N</b> · LON <b>118.2437° W</b><br>
+        ORBITAL <b>+ 41,920m</b>
+      </div>
+    </div>
+    <div>
+      <h6>Agents</h6>
+      <a>Doculens</a>
+      <a>JiraCreate</a>
+      <a>Foundations AI</a>
+      <a>HireX</a>
+      <a>CortexAI</a>
+      <a>Architect AI</a>
+    </div>
+    <div>
+      <h6>Operators</h6>
+      <a>Console</a>
+      <a>Mesh status</a>
+      <a>Agent SDK</a>
+      <a>Memory layer</a>
+      <a>Field guide</a>
+    </div>
+    <div>
+      <h6>Outpost</h6>
+      <a>Request access</a>
+      <a>Careers</a>
+      <a>Press kit</a>
+      <a>Manifesto</a>
+      <a>Changelog</a>
+    </div>
+    <div class="foot-bottom">
+      <div>© 2026 NEXUS LABORATORIES · SIX AGENTS · ONE MESH</div>
+      <div class="right">
+        <span>v.2149.05.28</span>
+        <span>BUILD 0xA41E</span>
+        <span>UPTIME 41d 02h</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<!-- libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<script>
+/* ════════════════════════════════════════════════
+   BACKGROUND SCENE — particle nebula + drift field
+   ════════════════════════════════════════════════ */
+(() => {
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x02030a, 1);
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x02030a, 0.045);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 14);
+
+  /* ── Volumetric nebula via shader plane ── */
+  const nebulaUniforms = {
+    uTime: { value: 0 },
+    uRes:  { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    uMouse:{ value: new THREE.Vector2(0,0) },
+  };
+  const nebulaMat = new THREE.ShaderMaterial({
+    uniforms: nebulaUniforms,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: `
+      varying vec2 vUv;
+      void main(){ vUv = uv; gl_Position = vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vUv;
+      uniform float uTime;
+      uniform vec2 uRes;
+      uniform vec2 uMouse;
+
+      // hash + simplex noise
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p){
+        vec2 i = floor(p); vec2 f = fract(p);
+        vec2 u = f*f*(3.0-2.0*f);
+        return mix(mix(hash(i+vec2(0,0)), hash(i+vec2(1,0)), u.x),
+                   mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
+      }
+      float fbm(vec2 p){
+        float v = 0.0; float a = 0.5;
+        for(int i=0;i<6;i++){ v += a*noise(p); p *= 2.07; a *= 0.5; }
+        return v;
+      }
+
+      void main(){
+        vec2 uv = (vUv - 0.5);
+        uv.x *= uRes.x / uRes.y;
+        vec2 m = (uMouse - 0.5) * vec2(uRes.x/uRes.y, 1.0);
+
+        float t = uTime * 0.045;
+        vec2 q = uv * 1.4;
+        q += 0.6 * vec2(fbm(q + t), fbm(q - t + 5.0));
+
+        float n  = fbm(q * 1.2 + vec2(t, -t*0.7));
+        float n2 = fbm(q * 2.6 - vec2(t*1.3, t*0.9));
+
+        // color blends
+        vec3 cyan    = vec3(0.36, 0.91, 1.0);
+        vec3 violet  = vec3(0.61, 0.42, 1.0);
+        vec3 magenta = vec3(1.0, 0.31, 0.85);
+        vec3 dark    = vec3(0.005, 0.008, 0.04);
+
+        vec3 col = mix(dark, violet, smoothstep(0.25, 0.85, n));
+        col = mix(col, cyan,    smoothstep(0.45, 0.95, n2) * 0.7);
+        col = mix(col, magenta, smoothstep(0.55, 0.95, n * n2) * 0.4);
+
+        // far-side radial fade & subtle vignette
+        float r = length(uv);
+        float vign = smoothstep(1.4, 0.2, r);
+        col *= vign;
+
+        // mouse warm spot
+        float md = distance(uv, m);
+        col += vec3(0.25, 0.55, 0.85) * smoothstep(0.55, 0.0, md) * 0.18;
+
+        // slight star sparkles
+        float s = step(0.9985, hash(floor(uv * 600.0))) * 0.7;
+        col += vec3(s);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `
+  });
+  const nebula = new THREE.Mesh(new THREE.PlaneGeometry(2,2), nebulaMat);
+  const nebulaScene = new THREE.Scene();
+  const nebulaCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  nebulaScene.add(nebula);
+
+  /* ── Particles ── */
+  const PARTICLES = 4200;
+  const pGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(PARTICLES * 3);
+  const colors    = new Float32Array(PARTICLES * 3);
+  const sizes     = new Float32Array(PARTICLES);
+  const seed      = new Float32Array(PARTICLES);
+  const palette = [
+    new THREE.Color('#5ee9ff'),
+    new THREE.Color('#9b6bff'),
+    new THREE.Color('#ff4fd8'),
+    new THREE.Color('#ffffff'),
+  ];
+  for (let i = 0; i < PARTICLES; i++){
+    const r = Math.pow(Math.random(), 0.6) * 32 + 4;
+    const t = Math.random() * Math.PI * 2;
+    const p = Math.acos(2*Math.random() - 1);
+    positions[i*3+0] = r * Math.sin(p) * Math.cos(t);
+    positions[i*3+1] = r * Math.sin(p) * Math.sin(t) * 0.55; // squashed disk
+    positions[i*3+2] = r * Math.cos(p) * 0.75 - 4;
+    const c = palette[Math.floor(Math.random() * palette.length)];
+    colors[i*3+0] = c.r; colors[i*3+1] = c.g; colors[i*3+2] = c.b;
+    sizes[i] = Math.random() * 1.6 + 0.4;
+    seed[i]  = Math.random() * 1000;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  pGeo.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
+  pGeo.setAttribute('aSize',    new THREE.BufferAttribute(sizes,     1));
+  pGeo.setAttribute('aSeed',    new THREE.BufferAttribute(seed,      1));
+
+  const pMat = new THREE.ShaderMaterial({
+    uniforms:{ uTime:{value:0}, uPixel:{value:renderer.getPixelRatio()} },
+    transparent:true, depthWrite:false, blending: THREE.AdditiveBlending,
+    vertexColors:true,
+    vertexShader: `
+      attribute float aSize;
+      attribute float aSeed;
+      uniform float uTime;
+      uniform float uPixel;
+      varying vec3 vC;
+      varying float vA;
+      void main(){
+        vC = color;
+        vec3 pos = position;
+        float t = uTime * 0.4 + aSeed;
+        pos.x += sin(t * 0.6 + aSeed) * 0.4;
+        pos.y += cos(t * 0.5 + aSeed * 1.3) * 0.4;
+        pos.z += sin(t * 0.4 + aSeed * 0.7) * 0.5;
+        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = aSize * (260.0 / -mv.z) * uPixel * 0.5;
+        vA = smoothstep(40.0, 5.0, -mv.z);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vC;
+      varying float vA;
+      void main(){
+        vec2 c = gl_PointCoord - 0.5;
+        float d = length(c);
+        float a = smoothstep(0.5, 0.0, d);
+        a *= a;
+        gl_FragColor = vec4(vC, a * vA);
+      }
+    `
+  });
+  const points = new THREE.Points(pGeo, pMat);
+  scene.add(points);
+
+  /* ── Wireframe geometry drifters ── */
+  const drifters = [];
+  function addDrifter(geo, scale, pos, color){
+    const mat = new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.32 });
+    const wf  = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+    wf.scale.setScalar(scale);
+    wf.position.set(...pos);
+    wf.userData = { rotS: Math.random()*0.001+0.0005, t: Math.random()*100 };
+    scene.add(wf);
+    drifters.push(wf);
+  }
+  addDrifter(new THREE.IcosahedronGeometry(1, 1), 2.4, [-7, 1.5, -2], 0x5ee9ff);
+  addDrifter(new THREE.IcosahedronGeometry(1, 2), 1.6, [ 7,-1.5, -4], 0x9b6bff);
+  addDrifter(new THREE.OctahedronGeometry(1, 0),  1.2, [ 5, 3.5, -6], 0xff4fd8);
+  addDrifter(new THREE.TorusGeometry(1, 0.18, 16, 60),  2.0, [-6,-3,-8], 0x5ee9ff);
+  addDrifter(new THREE.DodecahedronGeometry(1, 0), 1.4, [0, -3,-10], 0xffffff);
+
+  /* ── Resize ── */
+  function onResize(){
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+    nebulaUniforms.uRes.value.set(w, h);
+  }
+  window.addEventListener('resize', onResize);
+
+  /* ── Mouse + scroll parallax ── */
+  const mouse = { x:0.5, y:0.5, tx:0.5, ty:0.5 };
+  window.addEventListener('mousemove', e=>{
+    mouse.tx = e.clientX / window.innerWidth;
+    mouse.ty = e.clientY / window.innerHeight;
+  });
+  let scrollY = 0, targetScroll = 0;
+  window.addEventListener('scroll', ()=> targetScroll = window.scrollY);
+
+  /* ── Render loop ── */
+  const clock = new THREE.Clock();
+  let frame = 0;
+  function render(){
+    const t = clock.getElapsedTime();
+    mouse.x += (mouse.tx - mouse.x) * 0.06;
+    mouse.y += (mouse.ty - mouse.y) * 0.06;
+    scrollY += (targetScroll - scrollY) * 0.08;
+
+    nebulaUniforms.uTime.value = t;
+    nebulaUniforms.uMouse.value.set(mouse.x, 1.0 - mouse.y);
+
+    pMat.uniforms.uTime.value = t;
+    points.rotation.y += 0.0008;
+    points.rotation.x = (mouse.y - 0.5) * 0.12;
+    points.position.y = -scrollY * 0.0026;
+
+    drifters.forEach((d,i)=>{
+      d.rotation.x += d.userData.rotS;
+      d.rotation.y += d.userData.rotS * 0.7;
+      d.position.y += Math.sin(t * 0.4 + d.userData.t) * 0.003;
+      d.material.opacity = 0.18 + Math.sin(t*0.6 + i) * 0.08;
+    });
+
+    camera.position.x = (mouse.x - 0.5) * 1.4;
+    camera.position.y = -(mouse.y - 0.5) * 0.9 - scrollY * 0.0018;
+    camera.lookAt(0,0,0);
+
+    renderer.autoClear = false;
+    renderer.clear();
+    renderer.render(nebulaScene, nebulaCam);
+    renderer.render(scene, camera);
+
+    frame++;
+    const fEl = document.getElementById('hud-frame');
+    if (fEl && frame % 4 === 0) fEl.textContent = String(frame).padStart(6,'0');
+    requestAnimationFrame(render);
+  }
+  render();
+})();
+
+/* ════════════════════════════════════════════════
+   HOLOGRAPHIC ORB — featured module
+   ════════════════════════════════════════════════ */
+(() => {
+  const c = document.getElementById('orb'); if(!c) return;
+  const r = new THREE.WebGLRenderer({canvas:c, alpha:true, antialias:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const resize = ()=>{ const s = c.parentElement.getBoundingClientRect(); r.setSize(s.width, s.height, false); cam.aspect = s.width/s.height; cam.updateProjectionMatrix(); };
+  const s = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(45, 1, 0.1, 50); cam.position.set(0,0,4.6);
+
+  // Inner wireframe icosahedron
+  const ico = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(1.1, 1)),
+    new THREE.LineBasicMaterial({color:0x5ee9ff, transparent:true, opacity:.85})
+  );
+  s.add(ico);
+
+  // Outer rings
+  const ringMat = new THREE.LineBasicMaterial({color:0x9b6bff, transparent:true, opacity:.55});
+  function ring(rad, axis){
+    const pts = []; const N=120;
+    for(let i=0;i<=N;i++){ const a = i/N*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*rad, Math.sin(a)*rad, 0));}
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    const l = new THREE.Line(g, ringMat.clone());
+    l.rotation[axis] = Math.PI/2;
+    s.add(l); return l;
+  }
+  const r1 = ring(1.6, 'x');
+  const r2 = ring(1.9, 'y');
+  const r3 = ring(2.1, 'z');
+  r3.material.color = new THREE.Color(0xff4fd8);
+
+  // Particles inside
+  const inner = new THREE.BufferGeometry();
+  const N = 600; const pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const t = Math.random()*Math.PI*2; const p = Math.acos(2*Math.random()-1);
+    const rd = 0.6 + Math.random()*1.2;
+    pos[i*3] = rd*Math.sin(p)*Math.cos(t);
+    pos[i*3+1] = rd*Math.sin(p)*Math.sin(t);
+    pos[i*3+2] = rd*Math.cos(p);
+  }
+  inner.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const ip = new THREE.Points(inner, new THREE.PointsMaterial({size:0.03, color:0x5ee9ff, transparent:true, opacity:.9, blending:THREE.AdditiveBlending, depthWrite:false}));
+  s.add(ip);
+
+  resize(); window.addEventListener('resize', resize);
+  let t0 = 0;
+  function loop(){
+    t0 += 0.01;
+    ico.rotation.x = t0*0.5; ico.rotation.y = t0*0.7;
+    r1.rotation.z = t0*0.4; r2.rotation.x = t0*0.6; r3.rotation.y = t0*0.3;
+    ip.rotation.y = -t0*0.3;
+    r.render(s, cam);
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ════════════════════════════════════════════════
+   VESSEL SCHEMATIC — wireframe craft + orbiting sail
+   ════════════════════════════════════════════════ */
+(() => {
+  const c = document.getElementById('vessel-canvas'); if(!c) return;
+  const r = new THREE.WebGLRenderer({canvas:c, alpha:true, antialias:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const resize = ()=>{ const s = c.parentElement.getBoundingClientRect(); r.setSize(s.width, s.height, false); cam.aspect = s.width/s.height; cam.updateProjectionMatrix(); };
+  const s = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 80); cam.position.set(3.5, 2, 5);
+
+  const group = new THREE.Group(); s.add(group);
+
+  // Hull (stretched octahedron + cones)
+  const hullMat = new THREE.LineBasicMaterial({ color:0x5ee9ff, transparent:true, opacity:.85 });
+  const hullSolid = new THREE.MeshBasicMaterial({ color:0x021a25, transparent:true, opacity:.3 });
+
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.45, 2.4, 16), hullSolid);
+  body.rotation.z = Math.PI/2;
+  const bodyW = new THREE.LineSegments(new THREE.EdgesGeometry(body.geometry), hullMat);
+  bodyW.rotation.z = Math.PI/2;
+  group.add(body, bodyW);
+
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.9, 16), hullSolid);
+  tail.rotation.z = -Math.PI/2; tail.position.x = -1.6;
+  const tailW = new THREE.LineSegments(new THREE.EdgesGeometry(tail.geometry), hullMat);
+  tailW.rotation.z = -Math.PI/2; tailW.position.x = -1.6;
+  group.add(tail, tailW);
+
+  // Wings / sails
+  const sailMat = new THREE.LineBasicMaterial({ color:0x9b6bff, transparent:true, opacity:.7 });
+  const sail = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.RingGeometry(1.5, 1.7, 32)),
+    sailMat
+  );
+  sail.rotation.y = Math.PI/2; sail.position.x = -0.3;
+  group.add(sail);
+
+  // Drive core ring
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16),
+    new THREE.MeshBasicMaterial({color:0xff4fd8}));
+  core.position.x = -1.9;
+  group.add(core);
+
+  // Orbiting probes
+  const probeMat = new THREE.PointsMaterial({size:0.08, color:0x5ee9ff, blending:THREE.AdditiveBlending, transparent:true});
+  const probes = [];
+  for(let i=0;i<3;i++){
+    const g = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0]), 3));
+    const p = new THREE.Points(g, probeMat);
+    s.add(p); probes.push({mesh:p, off:i*Math.PI*2/3, rad:2.6 + i*0.3, sp:0.6 + i*0.2});
+  }
+
+  // Grid floor for depth
+  const gridMat = new THREE.LineBasicMaterial({color:0x1a2552, transparent:true, opacity:.5});
+  const grid = new THREE.GridHelper(10, 20, 0x1a2552, 0x0c1130);
+  grid.position.y = -1.2;
+  s.add(grid);
+
+  resize(); window.addEventListener('resize', resize);
+
+  let t = 0;
+  function loop(){
+    t += 0.012;
+    group.rotation.y = t * 0.4;
+    group.position.y = Math.sin(t * 0.7) * 0.06;
+    sail.rotation.x = t * 0.8;
+    core.scale.setScalar(1 + Math.sin(t*4)*0.18);
+    probes.forEach(p=>{
+      const a = t*p.sp + p.off;
+      const arr = p.mesh.geometry.attributes.position.array;
+      arr[0] = Math.cos(a) * p.rad; arr[1] = Math.sin(t*0.8)*0.2; arr[2] = Math.sin(a) * p.rad * 0.6;
+      p.mesh.geometry.attributes.position.needsUpdate = true;
+    });
+    r.render(s, cam);
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ════════════════════════════════════════════════
+   BOOT HIDE, REVEAL ON SCROLL, NAV, CLOCK, CURSOR
+   ════════════════════════════════════════════════ */
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    document.getElementById('boot').classList.add('gone');
+    document.querySelectorAll('.reveal').forEach(el=> {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight - 60) el.classList.add('in');
+    });
+  }, 2200);
+});
+
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if (e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el=> io.observe(el));
+
+// Animated counters
+const counted = new WeakSet();
+const co = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if (!e.isIntersecting || counted.has(e.target)) return;
+    counted.add(e.target);
+    const target = parseInt(e.target.dataset.count, 10);
+    const dur = 1400, start = performance.now();
+    const step = (now)=>{
+      const k = Math.min(1, (now - start) / dur);
+      const v = Math.floor(k * target * (1 - Math.pow(1-k, 3)) / (1 - Math.pow(1-1, 3) || 1)) || Math.floor(target * (1 - Math.pow(1-k, 3)));
+      e.target.textContent = String(v).padStart(String(target).length, '0');
+      if (k < 1) requestAnimationFrame(step);
+      else e.target.textContent = String(target).padStart(String(target).length, '0');
+    };
+    requestAnimationFrame(step);
+  });
+}, { threshold: .4 });
+document.querySelectorAll('[data-count]').forEach(el=> co.observe(el));
+
+// Clock
+function tickClock(){
+  const d = new Date();
+  document.getElementById('utc').textContent = d.toISOString().substr(11,8) + ' UTC';
+  document.getElementById('hud-time').innerHTML = '// SYNC LOCKED &nbsp;·&nbsp; ' + d.toISOString().substr(0,10);
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// Sparklines
+(()=>{
+  const el = document.getElementById('spark'); if(!el) return;
+})();
+const spark1 = document.getElementById('spark1');
+if (spark1){
+  const bars = 28;
+  for(let i=0;i<bars;i++){ const b=document.createElement('span'); b.style.height = (Math.random()*80+10)+'%'; spark1.appendChild(b); }
+  setInterval(()=>{
+    [...spark1.children].forEach((b,i)=>{ b.style.height = (Math.random()*80+10)+'%'; b.style.transition='height .9s ease'; });
+  }, 1100);
+}
+
+// Hero parallax for floating cards
+const cards = document.querySelectorAll('.gcard');
+window.addEventListener('mousemove', e=>{
+  const x = (e.clientX/window.innerWidth - 0.5);
+  const y = (e.clientY/window.innerHeight - 0.5);
+  cards.forEach(c=>{
+    const d = parseFloat(c.dataset.depth || 1);
+    c.style.transform = `translate3d(${x*-30*d}px, ${y*-30*d}px, 0) rotateX(${-y*4}deg) rotateY(${x*4}deg)`;
+  });
+});
+
+// Active nav based on scroll
+const sections = ['#hero','#agents','#doculens','#log','#signal'].map(id=>document.querySelector(id));
+const navLinks = document.querySelectorAll('.nav a');
+window.addEventListener('scroll', ()=>{
+  let active = 0;
+  const y = window.scrollY + window.innerHeight*0.35;
+  sections.forEach((s,i)=>{ if (s && s.offsetTop <= y) active = i; });
+  navLinks.forEach((l,i)=> l.classList.toggle('active', i===active));
+});
+navLinks.forEach((l,i)=> l.addEventListener('click', e=>{
+  e.preventDefault();
+  sections[i].scrollIntoView({behavior:'smooth', block:'start'});
+}));
+
+// Custom cursor
+const ring = document.getElementById('cur-ring'), dot = document.getElementById('cur-dot');
+let mx=window.innerWidth/2, my=window.innerHeight/2, rx=mx, ry=my;
+window.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; dot.style.transform=`translate(${mx-3}px, ${my-3}px)`; });
+function curLoop(){ rx += (mx-rx)*0.18; ry += (my-ry)*0.18; ring.style.transform=`translate(${rx-19}px, ${ry-19}px)`; requestAnimationFrame(curLoop); }
+curLoop();
+document.querySelectorAll('[data-cur="hot"], a, button, input').forEach(el=>{
+  el.addEventListener('mouseenter', ()=> ring.classList.add('hot'));
+  el.addEventListener('mouseleave', ()=> ring.classList.remove('hot'));
+});
+
+// Terminal typing
+const termCmd = document.getElementById('term-cmd');
+const lines = [
+  'architect propose --domain billing --pattern event-driven',
+  'cortex coach --learner alex --topic "system design"',
+  'doculens regen --release v2.4 --format mdx',
+  'foundations narrate warehouse://sales/q2_2026'
+];
+let li=0, ci=0, dir=1;
+function typeLoop(){
+  const line = lines[li];
+  ci += dir;
+  termCmd.textContent = line.slice(0, ci);
+  if (ci === line.length) { dir = 0; setTimeout(()=>{ dir = -1; typeLoop(); }, 1400); return; }
+  if (ci === 0 && dir === -1) { dir = 1; li = (li+1)%lines.length; setTimeout(typeLoop, 400); return; }
+  setTimeout(typeLoop, dir>0 ? 60 + Math.random()*40 : 30);
+}
+typeLoop();
+
+// Signal form
+function transmit(form){
+  const input = form.querySelector('input');
+  const v = input.value;
+  const term = document.getElementById('term');
+  const add = (cls, html)=>{ const d=document.createElement('div'); d.innerHTML = html; term.insertBefore(d, term.lastElementChild); term.scrollTop = term.scrollHeight; };
+  add('', `<span class="pr">nexus &gt;</span> <span class="dim">mesh request --from ${v}</span>`);
+  setTimeout(()=> add('', `<span class="ok">✓</span> routing to the matching agent…`), 300);
+  setTimeout(()=> add('', `<span class="ok">✓</span> access requested · operator will reply in <b style="color:var(--cyan)">≤ 24h</b>`), 900);
+  input.value = '';
+}
+</script>
+</body>
+</html>
