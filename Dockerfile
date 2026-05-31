@@ -1,15 +1,21 @@
 FROM nginx:1.27-alpine
 
-# nginx:alpine auto-processes templates in /etc/nginx/templates/*.template
-# via envsubst at container start — perfect for Railway's dynamic $PORT.
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+# Static site
 COPY index.html /usr/share/nginx/html/index.html
 
-# Railway injects $PORT; this is just a local-dev fallback.
+# Config template — substituted with the actual $PORT at container start
+COPY nginx.conf.template /etc/nginx/nginx-site.conf.template
+
+# Railway injects $PORT at runtime; 8080 is just the local-dev fallback
 ENV PORT=8080
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:${PORT}/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+# Render the config with the live PORT, log everything for Railway debugging,
+# then exec nginx in foreground.
+CMD : ${PORT:=8080} && \
+    envsubst '${PORT}' < /etc/nginx/nginx-site.conf.template > /etc/nginx/conf.d/default.conf && \
+    echo "[boot] PORT=$PORT" && \
+    echo "[boot] rendered /etc/nginx/conf.d/default.conf:" && \
+    cat /etc/nginx/conf.d/default.conf && \
+    nginx -t && \
+    exec nginx -g 'daemon off;'

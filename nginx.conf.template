@@ -1,5 +1,6 @@
 server {
-  listen       ${PORT};
+  listen       ${PORT} default_server;
+  listen       [::]:${PORT} default_server;
   server_name  _;
   root         /usr/share/nginx/html;
   index        index.html;
@@ -11,7 +12,7 @@ server {
   gzip_comp_level    6;
   gzip_types         text/plain text/css application/javascript application/json text/html image/svg+xml;
 
-  # Short HTML cache so deploys propagate fast; long cache for static assets.
+  # Short HTML cache so deploys propagate fast.
   location = /index.html {
     add_header Cache-Control "public, max-age=300, must-revalidate";
   }
