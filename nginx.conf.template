@@ -1,0 +1,25 @@
+server {
+  listen       ${PORT};
+  server_name  _;
+  root         /usr/share/nginx/html;
+  index        index.html;
+
+  # The HTML embeds inline GLSL + Three.js setup, so gzip is a real win.
+  gzip               on;
+  gzip_vary          on;
+  gzip_min_length    1024;
+  gzip_comp_level    6;
+  gzip_types         text/plain text/css application/javascript application/json text/html image/svg+xml;
+
+  # Short HTML cache so deploys propagate fast; long cache for static assets.
+  location = /index.html {
+    add_header Cache-Control "public, max-age=300, must-revalidate";
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # Quiet the favicon noise.
+  location = /favicon.ico { access_log off; log_not_found off; }
+}
